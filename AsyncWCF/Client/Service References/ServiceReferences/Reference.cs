@@ -20,6 +20,20 @@ namespace Client.ServiceReferences {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ITestService/Ping", ReplyAction="http://tempuri.org/ITestService/PingResponse")]
         System.Threading.Tasks.Task<string> PingAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ITestService/DoLongRunningOperation", ReplyAction="http://tempuri.org/ITestService/DoLongRunningOperationResponse")]
+        [System.ServiceModel.FaultContractAttribute(typeof(string), Action="http://tempuri.org/ITestService/DoLongRunningOperationStringFault", Name="string", Namespace="http://schemas.microsoft.com/2003/10/Serialization/")]
+        string DoLongRunningOperation(string input);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ITestService/DoLongRunningOperation", ReplyAction="http://tempuri.org/ITestService/DoLongRunningOperationResponse")]
+        System.Threading.Tasks.Task<string> DoLongRunningOperationAsync(string input);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ITestService/AbortLongRunningOperation", ReplyAction="http://tempuri.org/ITestService/AbortLongRunningOperationResponse")]
+        [System.ServiceModel.FaultContractAttribute(typeof(string), Action="http://tempuri.org/ITestService/AbortLongRunningOperationStringFault", Name="string", Namespace="http://schemas.microsoft.com/2003/10/Serialization/")]
+        void AbortLongRunningOperation();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/ITestService/AbortLongRunningOperation", ReplyAction="http://tempuri.org/ITestService/AbortLongRunningOperationResponse")]
+        System.Threading.Tasks.Task AbortLongRunningOperationAsync();
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -55,6 +69,22 @@ namespace Client.ServiceReferences {
         
         public System.Threading.Tasks.Task<string> PingAsync() {
             return base.Channel.PingAsync();
+        }
+        
+        public string DoLongRunningOperation(string input) {
+            return base.Channel.DoLongRunningOperation(input);
+        }
+        
+        public System.Threading.Tasks.Task<string> DoLongRunningOperationAsync(string input) {
+            return base.Channel.DoLongRunningOperationAsync(input);
+        }
+        
+        public void AbortLongRunningOperation() {
+            base.Channel.AbortLongRunningOperation();
+        }
+        
+        public System.Threading.Tasks.Task AbortLongRunningOperationAsync() {
+            return base.Channel.AbortLongRunningOperationAsync();
         }
     }
 }

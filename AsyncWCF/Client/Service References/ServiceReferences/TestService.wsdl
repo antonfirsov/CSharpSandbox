@@ -41,10 +41,38 @@
   <wsdl:message name="ITestService_Ping_OutputMessage">
     <wsdl:part name="parameters" element="tns:PingResponse" />
   </wsdl:message>
+  <wsdl:message name="ITestService_DoLongRunningOperation_InputMessage">
+    <wsdl:part name="parameters" element="tns:DoLongRunningOperation" />
+  </wsdl:message>
+  <wsdl:message name="ITestService_DoLongRunningOperation_OutputMessage">
+    <wsdl:part name="parameters" element="tns:DoLongRunningOperationResponse" />
+  </wsdl:message>
+  <wsdl:message name="ITestService_DoLongRunningOperation_StringFault_FaultMessage">
+    <wsdl:part xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/" name="detail" element="q1:string" />
+  </wsdl:message>
+  <wsdl:message name="ITestService_AbortLongRunningOperation_InputMessage">
+    <wsdl:part name="parameters" element="tns:AbortLongRunningOperation" />
+  </wsdl:message>
+  <wsdl:message name="ITestService_AbortLongRunningOperation_OutputMessage">
+    <wsdl:part name="parameters" element="tns:AbortLongRunningOperationResponse" />
+  </wsdl:message>
+  <wsdl:message name="ITestService_AbortLongRunningOperation_StringFault_FaultMessage">
+    <wsdl:part xmlns:q2="http://schemas.microsoft.com/2003/10/Serialization/" name="detail" element="q2:string" />
+  </wsdl:message>
   <wsdl:portType name="ITestService">
     <wsdl:operation name="Ping">
       <wsdl:input wsaw:Action="http://tempuri.org/ITestService/Ping" message="tns:ITestService_Ping_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/ITestService/PingResponse" message="tns:ITestService_Ping_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="DoLongRunningOperation">
+      <wsdl:input wsaw:Action="http://tempuri.org/ITestService/DoLongRunningOperation" message="tns:ITestService_DoLongRunningOperation_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ITestService/DoLongRunningOperationResponse" message="tns:ITestService_DoLongRunningOperation_OutputMessage" />
+      <wsdl:fault wsaw:Action="http://tempuri.org/ITestService/DoLongRunningOperationStringFault" name="StringFault" message="tns:ITestService_DoLongRunningOperation_StringFault_FaultMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="AbortLongRunningOperation">
+      <wsdl:input wsaw:Action="http://tempuri.org/ITestService/AbortLongRunningOperation" message="tns:ITestService_AbortLongRunningOperation_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ITestService/AbortLongRunningOperationResponse" message="tns:ITestService_AbortLongRunningOperation_OutputMessage" />
+      <wsdl:fault wsaw:Action="http://tempuri.org/ITestService/AbortLongRunningOperationStringFault" name="StringFault" message="tns:ITestService_AbortLongRunningOperation_StringFault_FaultMessage" />
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:binding name="NetTcpBinding_ITestService" type="tns:ITestService">
@@ -59,6 +87,30 @@
         <soap12:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
+    <wsdl:operation name="DoLongRunningOperation">
+      <soap12:operation soapAction="http://tempuri.org/ITestService/DoLongRunningOperation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="StringFault">
+        <soap12:fault use="literal" name="StringFault" namespace="" />
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="AbortLongRunningOperation">
+      <soap12:operation soapAction="http://tempuri.org/ITestService/AbortLongRunningOperation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="StringFault">
+        <soap12:fault use="literal" name="StringFault" namespace="" />
+      </wsdl:fault>
+    </wsdl:operation>
   </wsdl:binding>
   <wsdl:binding name="BasicHttpBinding_ITestService" type="tns:ITestService">
     <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
@@ -70,6 +122,30 @@
       <wsdl:output>
         <soap:body use="literal" />
       </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DoLongRunningOperation">
+      <soap:operation soapAction="http://tempuri.org/ITestService/DoLongRunningOperation" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="StringFault">
+        <soap:fault use="literal" name="StringFault" namespace="" />
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="AbortLongRunningOperation">
+      <soap:operation soapAction="http://tempuri.org/ITestService/AbortLongRunningOperation" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="StringFault">
+        <soap:fault use="literal" name="StringFault" namespace="" />
+      </wsdl:fault>
     </wsdl:operation>
   </wsdl:binding>
   <wsdl:service name="TestService">
