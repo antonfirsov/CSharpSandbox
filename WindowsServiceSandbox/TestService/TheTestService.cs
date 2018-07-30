@@ -38,14 +38,14 @@ namespace TestService
 
             Thread.Sleep(15000);
             _logger.Log("Yay after 15 sec!");
-            
-            
-            string exePath =
-                @"c:\dev\sandbox\csharp\DotNetSandbox\WindowsServiceSandbox\TestConsole\bin\Debug\TestConsole.exe";
-            _logger.Log("Running "+exePath);
 
-            ProcessStarter ps = new ProcessStarter(exePath, _logger);
-            ps.Run();
+            string dir = new FileInfo(GetType().Assembly.Location).Directory.FullName;
+
+            string exePath = Path.Combine(dir, "TestConsole.exe");
+            _logger.Log("Running " + exePath);
+
+            ProcessStarter ps = new ProcessStarter(_logger);
+            ps.Run(exePath, null, ProcessStarter.ActiveSessionRetrieavalMethod.WTSGetActiveConsoleSessionId);
             //ProcessAsCurrentUser stuff = new ProcessAsCurrentUser(_logger);
             //stuff.CreateProcessAsCurrentUser(exePath);
             _logger.Log("Done.");

@@ -11,8 +11,14 @@ namespace UserProcess
     /// <summary>
     /// https://www.codeproject.com/Articles/36581/Interaction-between-services-and-applications-at-u
     /// </summary>
-    public class ProcessStarter : IDisposable
+    public class ProcessStarter
     {
+        public enum ActiveSessionRetrieavalMethod
+        {
+            WTSGetActiveConsoleSessionId,
+            WTSEnumerateSessions
+        }
+
         private ILogger _logger;
 
         #region Import Section
@@ -52,17 +58,7 @@ namespace UserProcess
         private static uint TOKEN_READ = (STANDARD_RIGHTS_READ | TOKEN_QUERY);
         private static uint TOKEN_ALL_ACCESS = (STANDARD_RIGHTS_REQUIRED | TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_QUERY_SOURCE | TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID);
 
-        private const uint NORMAL_PRIORITY_CLASS = 0x0020;
-
-        private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
-
-
-        private const uint MAX_PATH = 260;
-
-        private const uint CREATE_NO_WINDOW = 0x08000000;
-
-        private const uint INFINITE = 0xFFFFFFFF;
-
+        
         [StructLayout(LayoutKind.Sequential)]
         public struct SECURITY_ATTRIBUTES
         {
@@ -146,35 +142,32 @@ namespace UserProcess
         static extern uint WTSGetActiveConsoleSessionId();
 
         [DllImport("wtsapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern bool WTSQueryUserToken(int sessionId, out IntPtr tokenHandle);
+        private static extern bool WTSQueryUserToken(int sessionId, out IntPtr tokenHandle);
 
         [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public extern static bool DuplicateTokenEx(IntPtr existingToken, uint desiredAccess, IntPtr tokenAttributes, SECURITY_IMPERSONATION_LEVEL impersonationLevel, TOKEN_TYPE tokenType, out IntPtr newToken);
+        private static extern bool DuplicateTokenEx(IntPtr existingToken, uint desiredAccess, IntPtr tokenAttributes, SECURITY_IMPERSONATION_LEVEL impersonationLevel, TOKEN_TYPE tokenType, out IntPtr newToken);
 
         [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern bool CreateProcessAsUser(IntPtr token, string applicationName, string commandLine, ref SECURITY_ATTRIBUTES processAttributes, ref SECURITY_ATTRIBUTES threadAttributes, bool inheritHandles, uint creationFlags, IntPtr environment, string currentDirectory, ref STARTUPINFO startupInfo, out PROCESS_INFORMATION processInformation);
+        private static extern bool CreateProcessAsUser(IntPtr token, string applicationName, string commandLine, ref SECURITY_ATTRIBUTES processAttributes, ref SECURITY_ATTRIBUTES threadAttributes, bool inheritHandles, uint creationFlags, IntPtr environment, string currentDirectory, ref STARTUPINFO startupInfo, out PROCESS_INFORMATION processInformation);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern bool CloseHandle(IntPtr handle);
+        private static extern bool CloseHandle(IntPtr handle);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern int GetLastError();
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern int WaitForSingleObject(IntPtr token, uint timeInterval);
+        private static extern int GetLastError();
 
         [DllImport("wtsapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern int WTSEnumerateSessions(System.IntPtr hServer, int Reserved, int Version, ref System.IntPtr ppSessionInfo, ref int pCount);
+        private static extern int WTSEnumerateSessions(System.IntPtr hServer, int Reserved, int Version, ref System.IntPtr ppSessionInfo, ref int pCount);
 
         [DllImport("userenv.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern bool CreateEnvironmentBlock(out IntPtr lpEnvironment, IntPtr hToken, bool bInherit);
+        private static extern bool CreateEnvironmentBlock(out IntPtr lpEnvironment, IntPtr hToken, bool bInherit);
 
         [DllImport("wtsapi32.dll", ExactSpelling = true, SetLastError = false)]
-        public static extern void WTSFreeMemory(IntPtr memory);
+        private static extern void WTSFreeMemory(IntPtr memory);
 
         [DllImport("userenv.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool DestroyEnvironmentBlock(IntPtr lpEnvironment);
+        private static extern bool DestroyEnvironmentBlock(IntPtr lpEnvironment);
 
         #endregion
 
@@ -183,49 +176,19 @@ namespace UserProcess
 
         }
 
-        public ProcessStarter(string fullExeName, ILogger logger)
+        public ProcessStarter(ILogger logger)
         {
-            _processPath = fullExeName;
             _logger = logger;
         }
-
-        public ProcessStarter(string fullExeName, string arguments, ILogger logger)
-            : this(fullExeName, logger)
-        {
-            _arguments = arguments;
-        }
-
-        public static IntPtr GetCurrentUserToken()
+        
+        public static IntPtr GetCurrentUserToken(ActiveSessionRetrieavalMethod sessionRetrieavalMethod)
         {
             IntPtr currentToken = IntPtr.Zero;
             IntPtr primaryToken = IntPtr.Zero;
-            IntPtr WTS_CURRENT_SERVER_HANDLE = IntPtr.Zero;
 
-            int dwSessionId = 0;
-            IntPtr hUserToken = IntPtr.Zero;
-            IntPtr hTokenDup = IntPtr.Zero;
-
-            IntPtr pSessionInfo = IntPtr.Zero;
-            int dwCount = 0;
-
-            WTSEnumerateSessions(WTS_CURRENT_SERVER_HANDLE, 0, 1, ref pSessionInfo, ref dwCount);
-
-            Int32 dataSize = Marshal.SizeOf(typeof(WTS_SESSION_INFO));
-
-            Int32 current = (int)pSessionInfo;
-            for (int i = 0; i < dwCount; i++)
-            {
-                WTS_SESSION_INFO si = (WTS_SESSION_INFO)Marshal.PtrToStructure((System.IntPtr)current, typeof(WTS_SESSION_INFO));
-                if (WTS_CONNECTSTATE_CLASS.WTSActive == si.State)
-                {
-                    dwSessionId = si.SessionID;
-                    break;
-                }
-
-                current += dataSize;
-            }
-
-            WTSFreeMemory(pSessionInfo);
+            int dwSessionId = sessionRetrieavalMethod == ActiveSessionRetrieavalMethod.WTSEnumerateSessions
+                ? GetActiveSessionIdByEnumeration()
+                : (int) WTSGetActiveConsoleSessionId();
 
             bool bRet = WTSQueryUserToken(dwSessionId, out currentToken);
             if (bRet == false)
@@ -242,10 +205,38 @@ namespace UserProcess
             return primaryToken;
         }
 
-        public void Run()
+        private static int GetActiveSessionIdByEnumeration()
         {
+            int dwSessionId = 0;
 
-            IntPtr primaryToken = GetCurrentUserToken();
+            IntPtr pSessionInfo = IntPtr.Zero;
+            int dwCount = 0;
+
+            WTSEnumerateSessions(IntPtr.Zero, 0, 1, ref pSessionInfo, ref dwCount);
+
+            Int32 dataSize = Marshal.SizeOf(typeof(WTS_SESSION_INFO));
+
+            Int32 current = (int) pSessionInfo;
+            for (int i = 0; i < dwCount; i++)
+            {
+                WTS_SESSION_INFO si =
+                    (WTS_SESSION_INFO) Marshal.PtrToStructure((System.IntPtr) current, typeof(WTS_SESSION_INFO));
+                if (si.State == WTS_CONNECTSTATE_CLASS.WTSActive)
+                {
+                    dwSessionId = si.SessionID;
+                    break;
+                }
+
+                current += dataSize;
+            }
+
+            WTSFreeMemory(pSessionInfo);
+            return dwSessionId;
+        }
+
+        public void Run(string processPath, string arguments, ActiveSessionRetrieavalMethod sessionRetrieavalMethod)
+        {
+            IntPtr primaryToken = GetCurrentUserToken(sessionRetrieavalMethod);
             if (primaryToken == IntPtr.Zero)
             {
                 return;
@@ -257,10 +248,10 @@ namespace UserProcess
             SECURITY_ATTRIBUTES Security1 = new SECURITY_ATTRIBUTES();
             SECURITY_ATTRIBUTES Security2 = new SECURITY_ATTRIBUTES();
 
-            string command = "\"" + _processPath + "\"";
-            if ((_arguments != null) && (_arguments.Length != 0))
+            string command = "\"" + processPath + "\"";
+            if (!string.IsNullOrEmpty(arguments))
             {
-                command += " " + _arguments;
+                command += " " + arguments;
             }
 
             IntPtr lpEnvironment = IntPtr.Zero;
@@ -287,59 +278,6 @@ namespace UserProcess
             CloseHandle(primaryToken);
         }
 
-        public void Stop()
-        {
-            Process[] processes = Process.GetProcesses();
-            foreach (Process current in processes)
-            {
-                //if (current.ProcessName == processName_)
-                //{
-                //    current.Kill();
-                //}
-            }
-        }
-
-        public int WaitForExit()
-        {
-            WaitForSingleObject(_processInfo.hProcess, INFINITE);
-            int errorcode = GetLastError();
-            return errorcode;
-        }
-
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-        }
-
-        #endregion
-
-        private string _processPath = string.Empty;
-        private string _arguments = string.Empty;
         private PROCESS_INFORMATION _processInfo;
-
-        public string ProcessPath
-        {
-            get
-            {
-                return _processPath;
-            }
-            set
-            {
-                _processPath = value;
-            }
-        }
-
-        public string Arguments
-        {
-            get
-            {
-                return _arguments;
-            }
-            set
-            {
-                _arguments = value;
-            }
-        }
     }
 }
