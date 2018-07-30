@@ -8,6 +8,9 @@ using TestService;
 
 namespace UserProcess
 {
+    /// <summary>
+    /// https://www.codeproject.com/Articles/36581/Interaction-between-services-and-applications-at-u
+    /// </summary>
     public class ProcessStarter : IDisposable
     {
         private ILogger _logger;
