@@ -241,13 +241,11 @@ namespace UserProcess
             {
                 return;
             }
-            STARTUPINFO StartupInfo = new STARTUPINFO();
-            _processInfo = new PROCESS_INFORMATION();
-            StartupInfo.cb = Marshal.SizeOf(StartupInfo);
+            STARTUPINFO startupInfo = new STARTUPINFO();
+            PROCESS_INFORMATION processInfo = new PROCESS_INFORMATION();
+            startupInfo.cb = Marshal.SizeOf(startupInfo);
 
-            SECURITY_ATTRIBUTES Security1 = new SECURITY_ATTRIBUTES();
-            SECURITY_ATTRIBUTES Security2 = new SECURITY_ATTRIBUTES();
-
+            
             string command = "\"" + processPath + "\"";
             if (!string.IsNullOrEmpty(arguments))
             {
@@ -263,9 +261,12 @@ namespace UserProcess
 
             CreateProcessFlags flags = CreateProcessFlags.CREATE_NEW_CONSOLE | CreateProcessFlags.CREATE_UNICODE_ENVIRONMENT;
 
-            bool createProcessResult = CreateProcessAsUser(primaryToken, null, command, ref Security1, ref Security2,
+            SECURITY_ATTRIBUTES processAttributes = new SECURITY_ATTRIBUTES();
+            SECURITY_ATTRIBUTES threadAttributes = new SECURITY_ATTRIBUTES();
+
+            bool createProcessResult = CreateProcessAsUser(primaryToken, null, command, ref processAttributes, ref threadAttributes,
                 false, (uint)flags, lpEnvironment, null,
-                ref StartupInfo, out _processInfo);
+                ref startupInfo, out processInfo);
 
             if (!createProcessResult)
             {
@@ -277,7 +278,5 @@ namespace UserProcess
             DestroyEnvironmentBlock(lpEnvironment);
             CloseHandle(primaryToken);
         }
-
-        private PROCESS_INFORMATION _processInfo;
     }
 }
